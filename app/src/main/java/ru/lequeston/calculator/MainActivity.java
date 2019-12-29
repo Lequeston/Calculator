@@ -1,5 +1,6 @@
 package ru.lequeston.calculator;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
@@ -10,6 +11,9 @@ import android.widget.Button;
 import android.widget.EditText;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String KEY_INPUT_FIRST_NUMBER = "input_first_number";
+    private static final String KEY_INPUT_SECOND_NUMBER = "input_second_number";
 
     private EditText mFirstNumberEditText;
     private EditText mSecondNumberEditText;
@@ -25,6 +29,14 @@ public class MainActivity extends AppCompatActivity {
 
         mFirstNumberEditText = (EditText) findViewById(R.id.first_number_edit_text);
         mSecondNumberEditText = (EditText) findViewById(R.id.second_number_edit_text);
+
+        if (savedInstanceState != null){
+            String firstNumber = savedInstanceState.getString(KEY_INPUT_FIRST_NUMBER);
+            String secondNumber = savedInstanceState.getString(KEY_INPUT_SECOND_NUMBER);
+            mFirstNumberEditText.setText(firstNumber);
+            mSecondNumberEditText.setText(secondNumber);
+        }
+
         mCalculateButton = (Button) findViewById(R.id.calculate_button);
 
         mCalculateButton.setOnClickListener(new View.OnClickListener() {
@@ -34,26 +46,16 @@ public class MainActivity extends AppCompatActivity {
                 String secondNumber = mSecondNumberEditText.getText().toString();
                 mFirstNumber = Integer.parseInt(firstNumber);
                 mSecondNumber = Integer.parseInt(secondNumber);
-                new Calculate().execute();
+                Intent intent = ResultActivity.newIntent(MainActivity.this, mFirstNumber, mSecondNumber);
+                startActivity(intent);
             }
         });
     }
 
-    public class Calculate extends AsyncTask<Void, Integer, Void> {
-
-        private int mResult;
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            mResult = mFirstNumber + mSecondNumber;
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
-            Intent intent = ResultActivity.newIntent(MainActivity.this, mResult);
-            startActivity(intent);
-        }
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(KEY_INPUT_FIRST_NUMBER, mFirstNumberEditText.getText().toString());
+        outState.putString(KEY_INPUT_SECOND_NUMBER, mSecondNumberEditText.getText().toString());
     }
 }
