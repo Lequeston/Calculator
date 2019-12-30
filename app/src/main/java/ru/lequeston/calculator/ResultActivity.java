@@ -2,16 +2,13 @@
 package ru.lequeston.calculator;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
-import android.util.Log;
 import android.widget.TextView;
 
 
@@ -20,15 +17,13 @@ public class ResultActivity extends AppCompatActivity {
     private static final String EXTRA_FIRST_NUMBER = "first_number";
     private static final String EXTRA_SECOND_NUMBER = "second_number";
     private static final String KEY_RESULT = "result";
-    private static final String KEY_THREAD = "thread";
 
     private TextView mResultTextView;
 
     private int mFirstNumber;
     private int mSecondNumber;
     private String mResult;
-    private CalculatorThread mCalculatorThread;
-
+    private HelpBroadcastReceiver receiver;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,33 +33,23 @@ public class ResultActivity extends AppCompatActivity {
 
         if (savedInstanceState != null){
             mResult = savedInstanceState.getString(KEY_RESULT);
-            mCalculatorThread = (CalculatorThread)savedInstanceState.get(KEY_THREAD);
-            if (!mCalculatorThread.isRun()){
-                mResultTextView.setText(mResult);
-                Log.i(TAG, "Result save");
-            } else {
-                mCalculatorThread.mHandler = mHandler;
-                Log.i(TAG, "Thread save");
-            }
-        } else {
-            Intent packageIntent = getIntent();
-            mFirstNumber = packageIntent.getIntExtra(EXTRA_FIRST_NUMBER, 0);
-            mSecondNumber = packageIntent.getIntExtra(EXTRA_SECOND_NUMBER, 0);
-            mCalculatorThread = new CalculatorThread(mHandler);
-            mCalculatorThread.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try{
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e){
-                        e.printStackTrace();
-                    }
-                    String result = ((Integer)(mFirstNumber + mSecondNumber)).toString();
-                    Message message = Message.obtain();
-                    message.obj = result;
-                    mCalculatorThread.mHandler.sendMessage(message);
-                }
-            });
+            mResultTextView.setText(mResult);
+        }
+
+        mFirstNumber = getIntent().getIntExtra(EXTRA_FIRST_NUMBER, 0);
+        mSecondNumber = getIntent().getIntExtra(EXTRA_SECOND_NUMBER, 0);
+
+        if(mResultTextView.getText().length() == 0) {
+
+            Intent intent = CalculatorIntentService.newIntent(ResultActivity.this, mFirstNumber, mSecondNumber);
+            startService(intent);
+
+            receiver = new HelpBroadcastReceiver();
+            //brsCreated = true;
+
+            IntentFilter intentFilter = new IntentFilter(CalculatorIntentService.TAG);
+            intentFilter.addCategory(Intent.CATEGORY_DEFAULT);
+            registerReceiver(receiver, intentFilter);
         }
     }
 
@@ -72,7 +57,6 @@ public class ResultActivity extends AppCompatActivity {
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(KEY_RESULT, mResult);
-        outState.putSerializable(KEY_THREAD, mCalculatorThread);
     }
 
     public static Intent newIntent(Context packageContext, int firstNumber, int secondNumber) {
@@ -87,12 +71,11 @@ public class ResultActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    private final Handler mHandler = new Handler(Looper.getMainLooper()){
+    public class HelpBroadcastReceiver extends BroadcastReceiver {
         @Override
-        public void handleMessage(@NonNull Message msg) {
-            super.handleMessage(msg);
-            mResult = (String)msg.obj;
-            mResultTextView.setText((String)msg.obj);
+        public void onReceive(Context context, Intent intent) {
+            mResult = CalculatorIntentService.getResult(intent);
+            mResultTextView.setText(mResult);
         }
-    };
+    }
 }

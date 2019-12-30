@@ -1,51 +1,53 @@
 package ru.lequeston.calculator;
 
-import android.util.Log;
+import android.app.IntentService;
+import android.content.Context;
+import android.content.Intent;
+import java.util.concurrent.TimeUnit;
 
-import androidx.appcompat.app.AppCompatActivity;
 
-import java.io.Serializable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import android.os.Handler;
+public class CalculatorIntentService extends IntentService {
+    public static final String TAG = "CalculatorIntentService";
+    private static final String EXTRA_FIRST_NUMBER = "first_number";
+    private static final String EXTRA_SECOND_NUMBER = "second_number";
+    private static final String EXTRA_KEY_RESULT = "result";
 
-public class CalculatorThread extends Thread implements Serializable {
-    private static final String TAG = "CalculatorThread";
+    private int mFirstNumber;
+    private int mSecondNumber;
+    private String mResult;
 
-    private final AtomicBoolean isAlive = new AtomicBoolean(true);
+    public static Intent newIntent(Context packageContext, int first, int second) {
+        Intent intent = new Intent(packageContext, CalculatorIntentService.class);
+        intent.putExtra(EXTRA_FIRST_NUMBER, first);
+        intent.putExtra(EXTRA_SECOND_NUMBER, second);
+        return intent;
+    }
 
-    private final ConcurrentLinkedQueue<Runnable>mQueue = new ConcurrentLinkedQueue<>();
-    public Handler mHandler;
-
-    public CalculatorThread(Handler handler){
+    public CalculatorIntentService() {
         super(TAG);
-        mHandler = handler;
-        start();
-        Log.i(TAG, "Thread start");
     }
 
     @Override
-    public void run() {
-        while (isAlive.get()){
-            Runnable task = mQueue.poll();
-            if (task != null){
-                task.run();
-                quit();
+    protected void onHandleIntent(Intent intent) {
+        if (intent != null) {
+            mFirstNumber = intent.getIntExtra(EXTRA_FIRST_NUMBER, 0);
+            mSecondNumber = intent.getIntExtra(EXTRA_SECOND_NUMBER, 0);
+
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
+            mResult = Integer.toString(mFirstNumber + mSecondNumber);
+            Intent responseIntent = new Intent();
+            responseIntent.setAction(TAG);
+            responseIntent.addCategory(Intent.CATEGORY_DEFAULT);
+            responseIntent.putExtra(EXTRA_KEY_RESULT, mResult);
+            sendBroadcast(responseIntent);
         }
     }
 
-    public CalculatorThread execute(Runnable task){
-        mQueue.add(task);
-        return this;
-    }
-
-    public boolean isRun(){
-        return isAlive.get();
-    }
-
-    public void quit(){
-        isAlive.set(false);
-        Log.i(TAG, "Thread stop");
+    public static String getResult(Intent intent){
+        return intent.getStringExtra(EXTRA_KEY_RESULT);
     }
 }
